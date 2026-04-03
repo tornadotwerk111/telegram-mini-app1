@@ -1,55 +1,289 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>My Mini App</title>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Shop</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
     body {
-      font-family: Arial, sans-serif;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      margin: 0;
-      background-color: var(--tg-theme-bg-color, #fff);
-      color: var(--tg-theme-text-color, #000);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--tg-theme-bg-color, #0f0f0f);
+      color: var(--tg-theme-text-color, #ffffff);
+      min-height: 100vh;
+      padding: 16px;
     }
-    .card {
+
+    .header {
       text-align: center;
-      padding: 20px;
+      padding: 24px 0 16px;
     }
-    button {
-      background: #2AABEE;
-      color: white;
-      border: none;
-      padding: 12px 24px;
-      border-radius: 8px;
-      font-size: 16px;
+    .header h1 { font-size: 24px; font-weight: 700; }
+    .header p { font-size: 14px; opacity: 0.6; margin-top: 4px; }
+
+    .products { display: flex; flex-direction: column; gap: 12px; margin-top: 8px; }
+
+    .product-card {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 16px;
+      padding: 16px;
       cursor: pointer;
-      margin-top: 16px;
+      transition: all 0.2s;
     }
+    .product-card:hover { background: rgba(255,255,255,0.1); transform: translateY(-1px); }
+    .product-card h2 { font-size: 16px; font-weight: 600; }
+    .product-card p { font-size: 13px; opacity: 0.6; margin-top: 4px; }
+    .product-card .price {
+      font-size: 18px; font-weight: 700; color: #7ee8a2; margin-top: 8px;
+    }
+    .buy-btn {
+      margin-top: 12px; width: 100%; padding: 10px;
+      background: linear-gradient(135deg, #7ee8a2, #4fc3f7);
+      border: none; border-radius: 10px;
+      font-size: 15px; font-weight: 600; color: #000;
+      cursor: pointer;
+    }
+
+    /* Modal */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.7); z-index: 100;
+      align-items: flex-end; justify-content: center;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal {
+      background: #1a1a1a; border-radius: 24px 24px 0 0;
+      padding: 24px; width: 100%; max-height: 90vh; overflow-y: auto;
+    }
+    .modal h2 { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+    .modal .price { color: #7ee8a2; font-size: 20px; font-weight: 700; margin-bottom: 16px; }
+
+    .crypto-select { display: flex; gap: 8px; margin-bottom: 16px; }
+    .crypto-btn {
+      flex: 1; padding: 10px; border-radius: 10px; border: 2px solid rgba(255,255,255,0.15);
+      background: transparent; color: white; font-size: 14px; font-weight: 600; cursor: pointer;
+    }
+    .crypto-btn.active { border-color: #7ee8a2; background: rgba(126,232,162,0.15); }
+
+    .wallet-box {
+      background: rgba(255,255,255,0.06); border-radius: 12px; padding: 14px;
+      margin-bottom: 16px; display: none;
+    }
+    .wallet-box.visible { display: block; }
+    .wallet-box label { font-size: 12px; opacity: 0.5; text-transform: uppercase; letter-spacing: 1px; }
+    .wallet-address {
+      font-size: 13px; word-break: break-all; margin-top: 6px;
+      background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px;
+      font-family: monospace;
+    }
+    .copy-btn {
+      margin-top: 8px; width: 100%; padding: 8px; border-radius: 8px;
+      background: rgba(255,255,255,0.1); border: none; color: white;
+      font-size: 13px; cursor: pointer;
+    }
+
+    .note-input {
+      width: 100%; padding: 12px; border-radius: 10px;
+      background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+      color: white; font-size: 14px; margin-bottom: 16px; resize: none;
+    }
+    .note-input::placeholder { opacity: 0.4; }
+
+    .confirm-btn {
+      width: 100%; padding: 14px; border-radius: 12px;
+      background: linear-gradient(135deg, #7ee8a2, #4fc3f7);
+      border: none; font-size: 16px; font-weight: 700; color: #000; cursor: pointer;
+    }
+    .close-btn {
+      width: 100%; padding: 12px; border-radius: 12px;
+      background: transparent; border: 1px solid rgba(255,255,255,0.15);
+      color: white; font-size: 14px; cursor: pointer; margin-top: 8px;
+    }
+
+    .success-screen {
+      display: none; text-align: center; padding: 32px 0;
+    }
+    .success-screen.visible { display: block; }
+    .success-screen .icon { font-size: 56px; margin-bottom: 16px; }
+    .success-screen h2 { font-size: 22px; font-weight: 700; }
+    .success-screen p { opacity: 0.6; margin-top: 8px; font-size: 14px; }
+
+    .loading { text-align: center; padding: 40px; opacity: 0.5; }
   </style>
 </head>
 <body>
-  <div class="card">
-    <h1>👋 Hello!</h1>
-    <p id="username">Loading...</p>
-    <button onclick="Telegram.WebApp.close()">Close App</button>
+
+<div class="header">
+  <h1>🛍️ My Shop</h1>
+  <p id="welcome-text">Loading...</p>
+</div>
+
+<div id="products" class="products">
+  <div class="loading">Loading products...</div>
+</div>
+
+<!-- Order Modal -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div id="order-form">
+      <h2 id="modal-product-name"></h2>
+      <div class="price" id="modal-product-price"></div>
+
+      <p style="font-size:13px; opacity:0.6; margin-bottom:10px;">Choose crypto:</p>
+      <div class="crypto-select">
+        <button class="crypto-btn" onclick="selectCrypto('ETH')">Ethereum (ETH)</button>
+        <button class="crypto-btn" onclick="selectCrypto('XMR')">Monero (XMR)</button>
+      </div>
+
+      <div class="wallet-box" id="wallet-box">
+        <label>Send payment to:</label>
+        <div class="wallet-address" id="wallet-address-text"></div>
+        <button class="copy-btn" onclick="copyWallet()">📋 Copy Address</button>
+      </div>
+
+      <textarea class="note-input" id="customer-note" rows="3"
+        placeholder="Order note (e.g. delivery address, size, color...)"></textarea>
+
+      <button class="confirm-btn" onclick="submitOrder()">✅ I've Sent Payment</button>
+      <button class="close-btn" onclick="closeModal()">Cancel</button>
+    </div>
+
+    <div class="success-screen" id="success-screen">
+      <div class="icon">🎉</div>
+      <h2>Order Placed!</h2>
+      <p>We'll confirm once your payment is verified.<br/>Thank you!</p>
+      <button class="confirm-btn" style="margin-top:24px" onclick="closeModal()">Done</button>
+    </div>
   </div>
+</div>
 
-  <script>
-    const tg = window.Telegram.WebApp;
-    tg.ready();
-    tg.expand();
+<script>
+  // =============================================
+  // 🔧 CONFIG — REPLACE THESE WITH YOUR VALUES
+  // =============================================
+  const SUPABASE_URL = 'https://jrhmjorpjplrqbzpnhxd.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpyaG1qb3JwanBscnFienBuaHhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxODgwMzAsImV4cCI6MjA5MDc2NDAzMH0.szMmHFJSQWEunMQld1MGp5eHRf3cSGHWJGkXRpdwndo';
+  const ETH_WALLET  = '0x1307890e784A202EF43bE4A4EC20282C55FEF798  ';
+  const XMR_WALLET  = '4BJPow2zGV5L53fmXh7WNG8gx9qWpG3fh6tQZKjYN6XP1xpfVfpqbNL2g7J4pDPd2KMPCVVPqVPXJACteAnJYrzgLUFDvzt';
+  // =============================================
 
-    const user = tg.initDataUnsafe?.user;
-    if (user) {
-      document.getElementById('username').textContent =
-        `Welcome, ${user.first_name}!`;
-    } else {
-      document.getElementById('username').textContent =
-        'Open this inside Telegram!';
+  const { createClient } = supabase;
+  const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+  const tg = window.Telegram.WebApp;
+  tg.ready();
+  tg.expand();
+
+  const user = tg.initDataUnsafe?.user;
+  let selectedProduct = null;
+  let selectedCrypto = null;
+
+  // Welcome message
+  document.getElementById('welcome-text').textContent =
+    user ? `Welcome, ${user.first_name}!` : 'Welcome to the shop!';
+
+  // Save/update user profile
+  async function saveUserProfile() {
+    if (!user) return;
+    await db.from('user_profiles').upsert({
+      telegram_user_id: String(user.id),
+      telegram_username: user.username || '',
+      first_name: user.first_name || '',
+      last_name: user.last_name || '',
+      last_seen: new Date().toISOString()
+    }, { onConflict: 'telegram_user_id' });
+  }
+
+  // Load products
+  async function loadProducts() {
+    const { data, error } = await db.from('products').select('*').order('created_at');
+    const container = document.getElementById('products');
+
+    if (error || !data?.length) {
+      container.innerHTML = '<div class="loading">No products found.</div>';
+      return;
     }
-  </script>
+
+    container.innerHTML = data.map(p => `
+      <div class="product-card">
+        <h2>${p.name}</h2>
+        <p>${p.description || ''}</p>
+        <div class="price">$${parseFloat(p.price_usd).toFixed(2)}</div>
+        <button class="buy-btn" onclick='openModal(${JSON.stringify(p)})'>Buy Now</button>
+      </div>
+    `).join('');
+  }
+
+  function openModal(product) {
+    selectedProduct = product;
+    selectedCrypto = null;
+    document.getElementById('modal-product-name').textContent = product.name;
+    document.getElementById('modal-product-price').textContent =
+      '$' + parseFloat(product.price_usd).toFixed(2);
+    document.getElementById('wallet-box').classList.remove('visible');
+    document.getElementById('customer-note').value = '';
+    document.getElementById('order-form').style.display = 'block';
+    document.getElementById('success-screen').classList.remove('visible');
+    document.querySelectorAll('.crypto-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('modal').classList.add('active');
+  }
+
+  function closeModal() {
+    document.getElementById('modal').classList.remove('active');
+  }
+
+  function selectCrypto(coin) {
+    selectedCrypto = coin;
+    document.querySelectorAll('.crypto-btn').forEach(b => b.classList.remove('active'));
+    event.target.classList.add('active');
+    const address = coin === 'ETH' ? ETH_WALLET : XMR_WALLET;
+    document.getElementById('wallet-address-text').textContent = address;
+    document.getElementById('wallet-box').classList.add('visible');
+  }
+
+  function copyWallet() {
+    const address = selectedCrypto === 'ETH' ? ETH_WALLET : XMR_WALLET;
+    navigator.clipboard.writeText(address);
+    document.querySelector('.copy-btn').textContent = '✅ Copied!';
+    setTimeout(() => document.querySelector('.copy-btn').textContent = '📋 Copy Address', 2000);
+  }
+
+  async function submitOrder() {
+    if (!selectedCrypto) {
+      alert('Please select a cryptocurrency first.');
+      return;
+    }
+
+    const note = document.getElementById('customer-note').value;
+    const walletUsed = selectedCrypto === 'ETH' ? ETH_WALLET : XMR_WALLET;
+
+    const { error } = await db.from('orders').insert({
+      telegram_user_id: user ? String(user.id) : 'unknown',
+      telegram_username: user?.username || '',
+      product_id: selectedProduct.id,
+      product_name: selectedProduct.name,
+      price_usd: selectedProduct.price_usd,
+      crypto: selectedCrypto,
+      wallet_address: walletUsed,
+      customer_note: note,
+      status: 'pending'
+    });
+
+    if (error) {
+      alert('Something went wrong. Please try again.');
+      return;
+    }
+
+    document.getElementById('order-form').style.display = 'none';
+    document.getElementById('success-screen').classList.add('visible');
+  }
+
+  // Init
+  saveUserProfile();
+  loadProducts();
+</script>
 </body>
 </html>
