@@ -1,289 +1,735 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Shop</title>
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Bakery</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0a0a;--card:#141414;--card2:#1c1c1c;
+  --border:rgba(255,255,255,0.07);--text:#fff;
+  --sub:rgba(255,255,255,0.45);--green:#a8e063;
+  --accent:#c8f584;--red:#ff6b6b;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:var(--bg);color:var(--text);min-height:100vh;
+  overflow-x:hidden;padding-bottom:80px;}
 
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: var(--tg-theme-bg-color, #0f0f0f);
-      color: var(--tg-theme-text-color, #ffffff);
-      min-height: 100vh;
-      padding: 16px;
-    }
+/* HEADER */
+.header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 16px 10px;position:sticky;top:0;
+  background:var(--bg);z-index:50;border-bottom:1px solid var(--border);
+}
+.logo{display:flex;align-items:center;gap:8px;}
+.logo-emoji{font-size:28px;animation:bounce 2s infinite;}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+.logo-text h1{font-size:17px;font-weight:700;line-height:1;}
+.logo-text .prices{font-size:10px;color:var(--sub);margin-top:2px;letter-spacing:0.3px;}
+.cart-btn{
+  position:relative;background:var(--card2);border:1px solid var(--border);
+  border-radius:12px;padding:8px 12px;font-size:20px;cursor:pointer;
+}
+.cart-badge{
+  position:absolute;top:-6px;right:-6px;background:var(--accent);
+  color:#000;font-size:10px;font-weight:700;border-radius:999px;
+  width:18px;height:18px;display:flex;align-items:center;justify-content:center;
+}
 
-    .header {
-      text-align: center;
-      padding: 24px 0 16px;
-    }
-    .header h1 { font-size: 24px; font-weight: 700; }
-    .header p { font-size: 14px; opacity: 0.6; margin-top: 4px; }
+/* TABS */
+.tabs{display:flex;gap:8px;padding:12px 16px;overflow-x:auto;scrollbar-width:none;}
+.tabs::-webkit-scrollbar{display:none;}
+.tab{
+  flex-shrink:0;padding:7px 16px;border-radius:999px;
+  border:1px solid var(--border);background:transparent;
+  color:var(--sub);font-size:13px;font-weight:500;cursor:pointer;
+  transition:all 0.2s;
+}
+.tab.active{background:var(--accent);color:#000;border-color:var(--accent);font-weight:700;}
 
-    .products { display: flex; flex-direction: column; gap: 12px; margin-top: 8px; }
+/* FILTER ROW */
+.filter-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 16px 12px;
+}
+.in-stock-toggle{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--sub);}
+.toggle{width:36px;height:20px;background:var(--accent);border-radius:999px;
+  position:relative;cursor:pointer;}
+.toggle-dot{width:16px;height:16px;background:#000;border-radius:50%;
+  position:absolute;top:2px;right:2px;transition:0.2s;}
 
-    .product-card {
-      background: rgba(255,255,255,0.06);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 16px;
-      padding: 16px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .product-card:hover { background: rgba(255,255,255,0.1); transform: translateY(-1px); }
-    .product-card h2 { font-size: 16px; font-weight: 600; }
-    .product-card p { font-size: 13px; opacity: 0.6; margin-top: 4px; }
-    .product-card .price {
-      font-size: 18px; font-weight: 700; color: #7ee8a2; margin-top: 8px;
-    }
-    .buy-btn {
-      margin-top: 12px; width: 100%; padding: 10px;
-      background: linear-gradient(135deg, #7ee8a2, #4fc3f7);
-      border: none; border-radius: 10px;
-      font-size: 15px; font-weight: 600; color: #000;
-      cursor: pointer;
-    }
+/* PRODUCT GRID */
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 16px;}
+.product-card{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:16px;overflow:hidden;cursor:pointer;transition:transform 0.2s;
+}
+.product-card:active{transform:scale(0.97);}
+.product-img{
+  width:100%;aspect-ratio:1;background:var(--card2);
+  display:flex;align-items:center;justify-content:center;
+  font-size:48px;
+}
+.product-img img{width:100%;height:100%;object-fit:cover;}
+.product-info{padding:10px;}
+.product-brand{font-size:10px;color:var(--accent);font-weight:700;
+  text-transform:uppercase;letter-spacing:0.5px;}
+.product-name{font-size:13px;font-weight:600;margin-top:2px;line-height:1.3;}
+.product-price{font-size:15px;font-weight:700;color:var(--accent);margin-top:6px;}
+.product-stock{font-size:11px;color:var(--sub);margin-top:2px;}
 
-    /* Modal */
-    .modal-overlay {
-      display: none; position: fixed; inset: 0;
-      background: rgba(0,0,0,0.7); z-index: 100;
-      align-items: flex-end; justify-content: center;
-    }
-    .modal-overlay.active { display: flex; }
-    .modal {
-      background: #1a1a1a; border-radius: 24px 24px 0 0;
-      padding: 24px; width: 100%; max-height: 90vh; overflow-y: auto;
-    }
-    .modal h2 { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
-    .modal .price { color: #7ee8a2; font-size: 20px; font-weight: 700; margin-bottom: 16px; }
+/* BOTTOM NAV */
+.bottom-nav{
+  position:fixed;bottom:0;left:0;right:0;
+  background:var(--bg);border-top:1px solid var(--border);
+  display:flex;padding:8px 0 20px;z-index:100;
+}
+.nav-item{
+  flex:1;display:flex;flex-direction:column;align-items:center;
+  gap:3px;font-size:10px;color:var(--sub);cursor:pointer;
+  padding:6px 0;transition:color 0.2s;
+}
+.nav-item.active{color:var(--accent);}
+.nav-icon{font-size:22px;}
 
-    .crypto-select { display: flex; gap: 8px; margin-bottom: 16px; }
-    .crypto-btn {
-      flex: 1; padding: 10px; border-radius: 10px; border: 2px solid rgba(255,255,255,0.15);
-      background: transparent; color: white; font-size: 14px; font-weight: 600; cursor: pointer;
-    }
-    .crypto-btn.active { border-color: #7ee8a2; background: rgba(126,232,162,0.15); }
+/* PAGES */
+.page{display:none;padding:16px;}
+.page.active{display:block;}
 
-    .wallet-box {
-      background: rgba(255,255,255,0.06); border-radius: 12px; padding: 14px;
-      margin-bottom: 16px; display: none;
-    }
-    .wallet-box.visible { display: block; }
-    .wallet-box label { font-size: 12px; opacity: 0.5; text-transform: uppercase; letter-spacing: 1px; }
-    .wallet-address {
-      font-size: 13px; word-break: break-all; margin-top: 6px;
-      background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px;
-      font-family: monospace;
-    }
-    .copy-btn {
-      margin-top: 8px; width: 100%; padding: 8px; border-radius: 8px;
-      background: rgba(255,255,255,0.1); border: none; color: white;
-      font-size: 13px; cursor: pointer;
-    }
+/* CART PAGE */
+.cart-item{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:14px;padding:14px;margin-bottom:10px;
+  display:flex;align-items:center;gap:12px;
+}
+.cart-item-emoji{font-size:32px;width:48px;text-align:center;}
+.cart-item-info{flex:1;}
+.cart-item-name{font-size:14px;font-weight:600;}
+.cart-item-price{font-size:13px;color:var(--accent);margin-top:2px;}
+.qty-control{display:flex;align-items:center;gap:8px;margin-top:8px;}
+.qty-btn{
+  width:28px;height:28px;border-radius:8px;border:1px solid var(--border);
+  background:var(--card2);color:white;font-size:16px;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+}
+.qty-num{font-size:14px;font-weight:700;min-width:20px;text-align:center;}
+.remove-btn{color:var(--red);font-size:18px;cursor:pointer;padding:4px;}
 
-    .note-input {
-      width: 100%; padding: 12px; border-radius: 10px;
-      background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
-      color: white; font-size: 14px; margin-bottom: 16px; resize: none;
-    }
-    .note-input::placeholder { opacity: 0.4; }
+.cart-summary{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:14px;padding:16px;margin-top:16px;
+}
+.summary-row{display:flex;justify-content:space-between;margin-bottom:8px;font-size:14px;}
+.summary-row.total{font-weight:700;font-size:16px;color:var(--accent);
+  border-top:1px solid var(--border);padding-top:10px;margin-top:4px;}
+.checkout-btn{
+  width:100%;padding:14px;border-radius:12px;margin-top:12px;
+  background:linear-gradient(135deg,var(--accent),#4fc3f7);
+  border:none;font-size:16px;font-weight:700;color:#000;cursor:pointer;
+}
+.checkout-btn:disabled{opacity:0.4;cursor:not-allowed;}
+.empty-state{text-align:center;padding:60px 20px;color:var(--sub);}
+.empty-state .icon{font-size:48px;margin-bottom:12px;}
 
-    .confirm-btn {
-      width: 100%; padding: 14px; border-radius: 12px;
-      background: linear-gradient(135deg, #7ee8a2, #4fc3f7);
-      border: none; font-size: 16px; font-weight: 700; color: #000; cursor: pointer;
-    }
-    .close-btn {
-      width: 100%; padding: 12px; border-radius: 12px;
-      background: transparent; border: 1px solid rgba(255,255,255,0.15);
-      color: white; font-size: 14px; cursor: pointer; margin-top: 8px;
-    }
+/* WALLET PAGE */
+.balance-card{
+  background:linear-gradient(135deg,#1a2a1a,#0f1f0f);
+  border:1px solid rgba(168,224,99,0.2);border-radius:20px;
+  padding:24px;text-align:center;margin-bottom:20px;
+}
+.balance-label{font-size:13px;color:var(--sub);}
+.balance-amount{font-size:40px;font-weight:700;color:var(--accent);margin:8px 0;}
+.deposit-section h3{font-size:15px;font-weight:700;margin-bottom:12px;}
+.crypto-tabs{display:flex;gap:8px;margin-bottom:16px;}
+.crypto-tab{
+  flex:1;padding:10px;border-radius:10px;border:2px solid var(--border);
+  background:transparent;color:var(--sub);font-size:14px;
+  font-weight:600;cursor:pointer;transition:all 0.2s;
+}
+.crypto-tab.active{border-color:var(--accent);color:var(--accent);
+  background:rgba(168,224,99,0.1);}
+.wallet-card{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:14px;padding:16px;margin-bottom:12px;
+}
+.wallet-label{font-size:11px;color:var(--sub);text-transform:uppercase;
+  letter-spacing:1px;margin-bottom:8px;}
+.wallet-addr{
+  font-family:monospace;font-size:12px;word-break:break-all;
+  background:var(--card2);padding:10px;border-radius:8px;line-height:1.5;
+}
+.copy-btn{
+  width:100%;padding:10px;margin-top:10px;border-radius:8px;
+  background:var(--card2);border:1px solid var(--border);
+  color:white;font-size:13px;cursor:pointer;
+}
+.amount-input{
+  width:100%;padding:12px;border-radius:10px;
+  background:var(--card2);border:1px solid var(--border);
+  color:white;font-size:16px;margin-bottom:12px;
+}
+.deposit-btn{
+  width:100%;padding:13px;border-radius:12px;
+  background:linear-gradient(135deg,var(--accent),#4fc3f7);
+  border:none;font-size:15px;font-weight:700;color:#000;cursor:pointer;
+}
+.deposit-history{margin-top:20px;}
+.deposit-item{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:12px;padding:12px 14px;margin-bottom:8px;
+  display:flex;justify-content:space-between;align-items:center;
+}
+.deposit-info .dep-crypto{font-size:13px;font-weight:600;}
+.deposit-info .dep-date{font-size:11px;color:var(--sub);margin-top:2px;}
+.deposit-status{font-size:12px;font-weight:600;padding:4px 10px;border-radius:999px;}
+.status-pending{background:rgba(255,200,0,0.15);color:#ffc800;}
+.status-confirmed{background:rgba(168,224,99,0.15);color:var(--accent);}
 
-    .success-screen {
-      display: none; text-align: center; padding: 32px 0;
-    }
-    .success-screen.visible { display: block; }
-    .success-screen .icon { font-size: 56px; margin-bottom: 16px; }
-    .success-screen h2 { font-size: 22px; font-weight: 700; }
-    .success-screen p { opacity: 0.6; margin-top: 8px; font-size: 14px; }
+/* ORDERS PAGE */
+.order-item{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:14px;padding:14px;margin-bottom:10px;
+}
+.order-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+.order-id{font-size:11px;color:var(--sub);font-family:monospace;}
+.order-products{font-size:13px;margin-bottom:6px;}
+.order-total{font-size:15px;font-weight:700;color:var(--accent);}
+.order-date{font-size:11px;color:var(--sub);margin-top:4px;}
 
-    .loading { text-align: center; padding: 40px; opacity: 0.5; }
-  </style>
+/* PROFILE PAGE */
+.profile-header{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:20px;padding:24px;text-align:center;margin-bottom:16px;
+}
+.profile-avatar{
+  width:72px;height:72px;border-radius:50%;
+  background:linear-gradient(135deg,var(--accent),#4fc3f7);
+  display:flex;align-items:center;justify-content:center;
+  font-size:32px;margin:0 auto 12px;
+}
+.profile-name{font-size:20px;font-weight:700;}
+.profile-handle{font-size:14px;color:var(--sub);margin-top:4px;}
+.profile-stats{
+  display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;
+}
+.stat-card{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:14px;padding:16px;text-align:center;
+}
+.stat-value{font-size:22px;font-weight:700;color:var(--accent);}
+.stat-label{font-size:12px;color:var(--sub);margin-top:4px;}
+
+/* MODAL */
+.modal-overlay{
+  display:none;position:fixed;inset:0;
+  background:rgba(0,0,0,0.8);z-index:200;
+  align-items:flex-end;justify-content:center;
+}
+.modal-overlay.active{display:flex;}
+.modal{
+  background:#141414;border-radius:24px 24px 0 0;
+  padding:24px;width:100%;max-height:85vh;overflow-y:auto;
+}
+.modal-handle{
+  width:40px;height:4px;background:var(--border);
+  border-radius:2px;margin:0 auto 20px;
+}
+.modal h2{font-size:20px;font-weight:700;margin-bottom:4px;}
+.modal-price{font-size:24px;font-weight:700;color:var(--accent);margin-bottom:16px;}
+.modal-brand{font-size:12px;color:var(--accent);text-transform:uppercase;
+  letter-spacing:0.5px;margin-bottom:4px;}
+.modal-desc{font-size:14px;color:var(--sub);margin-bottom:20px;line-height:1.5;}
+.qty-section{margin-bottom:20px;}
+.qty-section label{font-size:13px;color:var(--sub);margin-bottom:8px;display:block;}
+.qty-row{display:flex;align-items:center;gap:12px;}
+.qty-row .qty-btn{width:36px;height:36px;font-size:18px;}
+.qty-row .qty-num{font-size:18px;}
+.add-cart-btn{
+  width:100%;padding:14px;border-radius:12px;
+  background:linear-gradient(135deg,var(--accent),#4fc3f7);
+  border:none;font-size:16px;font-weight:700;color:#000;cursor:pointer;
+}
+.page-title{font-size:20px;font-weight:700;margin-bottom:16px;}
+
+.toast{
+  position:fixed;top:20px;left:50%;transform:translateX(-50%);
+  background:var(--accent);color:#000;padding:10px 20px;
+  border-radius:999px;font-size:13px;font-weight:700;
+  z-index:999;opacity:0;transition:opacity 0.3s;pointer-events:none;
+}
+.toast.show{opacity:1;}
+</style>
 </head>
 <body>
 
+<!-- HEADER -->
 <div class="header">
-  <h1>🛍️ My Shop</h1>
-  <p id="welcome-text">Loading...</p>
-</div>
-
-<div id="products" class="products">
-  <div class="loading">Loading products...</div>
-</div>
-
-<!-- Order Modal -->
-<div class="modal-overlay" id="modal">
-  <div class="modal">
-    <div id="order-form">
-      <h2 id="modal-product-name"></h2>
-      <div class="price" id="modal-product-price"></div>
-
-      <p style="font-size:13px; opacity:0.6; margin-bottom:10px;">Choose crypto:</p>
-      <div class="crypto-select">
-        <button class="crypto-btn" onclick="selectCrypto('ETH')">Ethereum (ETH)</button>
-        <button class="crypto-btn" onclick="selectCrypto('XMR')">Monero (XMR)</button>
-      </div>
-
-      <div class="wallet-box" id="wallet-box">
-        <label>Send payment to:</label>
-        <div class="wallet-address" id="wallet-address-text"></div>
-        <button class="copy-btn" onclick="copyWallet()">📋 Copy Address</button>
-      </div>
-
-      <textarea class="note-input" id="customer-note" rows="3"
-        placeholder="Order note (e.g. delivery address, size, color...)"></textarea>
-
-      <button class="confirm-btn" onclick="submitOrder()">✅ I've Sent Payment</button>
-      <button class="close-btn" onclick="closeModal()">Cancel</button>
+  <div class="logo">
+    <span class="logo-emoji">🥐</span>
+    <div class="logo-text">
+      <h1>Bakery</h1>
+      <div class="prices" id="crypto-prices">Loading prices...</div>
     </div>
+  </div>
+  <button class="cart-btn" onclick="switchPage('cart')">
+    🛒
+    <span class="cart-badge" id="cart-badge" style="display:none">0</span>
+  </button>
+</div>
 
-    <div class="success-screen" id="success-screen">
-      <div class="icon">🎉</div>
-      <h2>Order Placed!</h2>
-      <p>We'll confirm once your payment is verified.<br/>Thank you!</p>
-      <button class="confirm-btn" style="margin-top:24px" onclick="closeModal()">Done</button>
+<!-- HOME PAGE -->
+<div id="page-home" class="page active" style="padding:0">
+  <div class="tabs" id="category-tabs">
+    <button class="tab active" onclick="filterCategory('all', this)">All</button>
+    <button class="tab" onclick="filterCategory('Carts',this)">Carts</button>
+    <button class="tab" onclick="filterCategory('Vapes',this)">Vapes</button>
+    <button class="tab" onclick="filterCategory('Disposables',this)">Disposables</button>
+    <button class="tab" onclick="filterCategory('In-House',this)">In-House</button>
+  </div>
+  <div class="grid" id="product-grid">
+    <div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--sub)">Loading...</div>
+  </div>
+</div>
+
+<!-- CART PAGE -->
+<div id="page-cart" class="page">
+  <div class="page-title">🛒 Cart</div>
+  <div id="cart-items-list"></div>
+  <div id="cart-summary"></div>
+</div>
+
+<!-- WALLET PAGE -->
+<div id="page-wallet" class="page">
+  <div class="page-title">💰 Wallet</div>
+  <div class="balance-card">
+    <div class="balance-label">Available Balance</div>
+    <div class="balance-amount" id="wallet-balance">$0.00</div>
+    <div style="font-size:12px;color:var(--sub)">USD equivalent</div>
+  </div>
+  <div class="deposit-section">
+    <h3>Deposit Crypto</h3>
+    <div class="crypto-tabs">
+      <button class="crypto-tab active" onclick="selectDepositCrypto('ETH',this)">Ethereum (ETH)</button>
+      <button class="crypto-tab" onclick="selectDepositCrypto('XMR',this)">Monero (XMR)</button>
+    </div>
+    <div class="wallet-card">
+      <div class="wallet-label">Send <span id="deposit-crypto-label">ETH</span> to this address</div>
+      <div class="wallet-addr" id="deposit-wallet-addr"></div>
+      <button class="copy-btn" onclick="copyDepositAddr()">📋 Copy Address</button>
+    </div>
+    <input class="amount-input" type="number" id="deposit-amount"
+      placeholder="Amount in USD you're sending" min="1"/>
+    <button class="deposit-btn" onclick="submitDeposit()">📥 I've Sent the Deposit</button>
+  </div>
+  <div class="deposit-history">
+    <div class="page-title" style="font-size:16px;margin-top:8px">Deposit History</div>
+    <div id="deposit-history-list"></div>
+  </div>
+</div>
+
+<!-- ORDERS PAGE -->
+<div id="page-orders" class="page">
+  <div class="page-title">📦 Orders</div>
+  <div id="orders-list"></div>
+</div>
+
+<!-- PROFILE PAGE -->
+<div id="page-profile" class="page">
+  <div class="profile-header">
+    <div class="profile-avatar">👤</div>
+    <div class="profile-name" id="profile-name">-</div>
+    <div class="profile-handle" id="profile-handle">-</div>
+  </div>
+  <div class="profile-stats">
+    <div class="stat-card">
+      <div class="stat-value" id="stat-balance">$0</div>
+      <div class="stat-label">Balance</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="stat-orders">0</div>
+      <div class="stat-label">Orders</div>
     </div>
   </div>
 </div>
 
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav">
+  <div class="nav-item active" onclick="switchPage('home')" id="nav-home">
+    <span class="nav-icon">🏠</span>Home
+  </div>
+  <div class="nav-item" onclick="switchPage('cart')" id="nav-cart">
+    <span class="nav-icon">🛒</span>Cart
+  </div>
+  <div class="nav-item" onclick="switchPage('wallet')" id="nav-wallet">
+    <span class="nav-icon">💰</span>Wallet
+  </div>
+  <div class="nav-item" onclick="switchPage('orders')" id="nav-orders">
+    <span class="nav-icon">📦</span>Orders
+  </div>
+  <div class="nav-item" onclick="switchPage('profile')" id="nav-profile">
+    <span class="nav-icon">👤</span>Profile
+  </div>
+</nav>
+
+<!-- PRODUCT MODAL -->
+<div class="modal-overlay" id="product-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-brand" id="modal-brand"></div>
+    <h2 id="modal-name"></h2>
+    <div class="modal-price" id="modal-price"></div>
+    <div class="modal-desc" id="modal-desc"></div>
+    <div class="qty-section">
+      <label>Quantity</label>
+      <div class="qty-row">
+        <button class="qty-btn" onclick="changeModalQty(-1)">−</button>
+        <span class="qty-num" id="modal-qty">1</span>
+        <button class="qty-btn" onclick="changeModalQty(1)">+</button>
+      </div>
+    </div>
+    <button class="add-cart-btn" onclick="addToCart()">🛒 Add to Cart</button>
+    <button class="copy-btn" style="margin-top:8px" onclick="closeModal()">Cancel</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
 <script>
-  // =============================================
-  // 🔧 CONFIG — REPLACE THESE WITH YOUR VALUES
-  // =============================================
-  const SUPABASE_URL = 'https://jrhmjorpjplrqbzpnhxd.supabase.co';
-  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpyaG1qb3JwanBscnFienBuaHhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxODgwMzAsImV4cCI6MjA5MDc2NDAzMH0.szMmHFJSQWEunMQld1MGp5eHRf3cSGHWJGkXRpdwndo';
-  const ETH_WALLET  = '0x1307890e784A202EF43bE4A4EC20282C55FEF798  ';
-  const XMR_WALLET  = '4BJPow2zGV5L53fmXh7WNG8gx9qWpG3fh6tQZKjYN6XP1xpfVfpqbNL2g7J4pDPd2KMPCVVPqVPXJACteAnJYrzgLUFDvzt';
-  // =============================================
+// =============================================
+// 🔧 CONFIG — REPLACE THESE
+// =============================================
+const SUPABASE_URL = 'YOUR_SUPABASE_URL';
+const SUPABASE_KEY = 'YOUR_SUPABASE_ANON_KEY';
+const ETH_WALLET   = 'YOUR_ETH_WALLET_ADDRESS';
+const XMR_WALLET   = 'YOUR_XMR_WALLET_ADDRESS';
+// =============================================
 
-  const { createClient } = supabase;
-  const db = createClient(SUPABASE_URL, SUPABASE_KEY);
-  const tg = window.Telegram.WebApp;
-  tg.ready();
-  tg.expand();
+const { createClient } = supabase;
+const db  = createClient(SUPABASE_URL, SUPABASE_KEY);
+const tg  = window.Telegram.WebApp;
+tg.ready(); tg.expand();
 
-  const user = tg.initDataUnsafe?.user;
-  let selectedProduct = null;
-  let selectedCrypto = null;
+const user = tg.initDataUnsafe?.user;
+let allProducts = [], cartItems = [], currentProduct = null, modalQty = 1;
+let selectedDepositCrypto = 'ETH';
+let userProfile = null;
 
-  // Welcome message
-  document.getElementById('welcome-text').textContent =
-    user ? `Welcome, ${user.first_name}!` : 'Welcome to the shop!';
+// ── Toast ────────────────────────────────────
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
 
-  // Save/update user profile
-  async function saveUserProfile() {
-    if (!user) return;
-    await db.from('user_profiles').upsert({
+// ── Page switching ───────────────────────────
+function switchPage(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  document.getElementById('nav-' + page).classList.add('active');
+  if (page === 'cart')    renderCart();
+  if (page === 'wallet')  renderWallet();
+  if (page === 'orders')  renderOrders();
+  if (page === 'profile') renderProfile();
+}
+
+// ── Crypto prices ────────────────────────────
+async function loadCryptoPrices() {
+  try {
+    const r = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum,monero&vs_currencies=usd');
+    const d = await r.json();
+    const eth = d.ethereum?.usd ? '$' + d.ethereum.usd.toLocaleString() : '—';
+    const xmr = d.monero?.usd   ? '$' + Math.round(d.monero.usd)        : '—';
+    document.getElementById('crypto-prices').textContent = `ETH ${eth}  •  XMR ${xmr}`;
+  } catch { document.getElementById('crypto-prices').textContent = 'ETH • XMR'; }
+}
+
+// ── User profile ─────────────────────────────
+async function initUser() {
+  if (!user) return;
+  const { data } = await db.from('user_profiles')
+    .upsert({
       telegram_user_id: String(user.id),
       telegram_username: user.username || '',
       first_name: user.first_name || '',
-      last_name: user.last_name || '',
-      last_seen: new Date().toISOString()
-    }, { onConflict: 'telegram_user_id' });
+      last_name:  user.last_name  || '',
+      last_seen:  new Date().toISOString()
+    }, { onConflict: 'telegram_user_id' })
+    .select().single();
+  userProfile = data;
+  document.getElementById('wallet-balance').textContent =
+    '$' + (parseFloat(data?.balance_usd || 0)).toFixed(2);
+  document.getElementById('stat-balance').textContent =
+    '$' + (parseFloat(data?.balance_usd || 0)).toFixed(2);
+}
+
+// ── Products ─────────────────────────────────
+async function loadProducts() {
+  const { data } = await db.from('products').select('*').order('created_at');
+  allProducts = data || [];
+  renderProducts(allProducts);
+}
+
+function renderProducts(products) {
+  const grid = document.getElementById('product-grid');
+  if (!products.length) {
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--sub)">No products found</div>';
+    return;
   }
-
-  // Load products
-  async function loadProducts() {
-    const { data, error } = await db.from('products').select('*').order('created_at');
-    const container = document.getElementById('products');
-
-    if (error || !data?.length) {
-      container.innerHTML = '<div class="loading">No products found.</div>';
-      return;
-    }
-
-    container.innerHTML = data.map(p => `
-      <div class="product-card">
-        <h2>${p.name}</h2>
-        <p>${p.description || ''}</p>
-        <div class="price">$${parseFloat(p.price_usd).toFixed(2)}</div>
-        <button class="buy-btn" onclick='openModal(${JSON.stringify(p)})'>Buy Now</button>
+  grid.innerHTML = products.map(p => `
+    <div class="product-card" onclick='openModal(${JSON.stringify(p)})'>
+      <div class="product-img">${p.image_url ? `<img src="${p.image_url}"/>` : '🥐'}</div>
+      <div class="product-info">
+        <div class="product-brand">${p.category || 'Bakery'}</div>
+        <div class="product-name">${p.name}</div>
+        <div class="product-price">$${parseFloat(p.price_usd).toFixed(2)}</div>
       </div>
-    `).join('');
-  }
+    </div>
+  `).join('');
+}
 
-  function openModal(product) {
-    selectedProduct = product;
-    selectedCrypto = null;
-    document.getElementById('modal-product-name').textContent = product.name;
-    document.getElementById('modal-product-price').textContent =
-      '$' + parseFloat(product.price_usd).toFixed(2);
-    document.getElementById('wallet-box').classList.remove('visible');
-    document.getElementById('customer-note').value = '';
-    document.getElementById('order-form').style.display = 'block';
-    document.getElementById('success-screen').classList.remove('visible');
-    document.querySelectorAll('.crypto-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById('modal').classList.add('active');
-  }
+function filterCategory(cat, el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderProducts(cat === 'all' ? allProducts : allProducts.filter(p => p.category === cat));
+}
 
-  function closeModal() {
-    document.getElementById('modal').classList.remove('active');
-  }
+// ── Product modal ────────────────────────────
+function openModal(product) {
+  currentProduct = product; modalQty = 1;
+  document.getElementById('modal-brand').textContent  = product.category || 'Bakery';
+  document.getElementById('modal-name').textContent   = product.name;
+  document.getElementById('modal-price').textContent  = '$' + parseFloat(product.price_usd).toFixed(2);
+  document.getElementById('modal-desc').textContent   = product.description || '';
+  document.getElementById('modal-qty').textContent    = 1;
+  document.getElementById('product-modal').classList.add('active');
+}
+function closeModal() { document.getElementById('product-modal').classList.remove('active'); }
+function changeModalQty(d) {
+  modalQty = Math.max(1, modalQty + d);
+  document.getElementById('modal-qty').textContent = modalQty;
+}
 
-  function selectCrypto(coin) {
-    selectedCrypto = coin;
-    document.querySelectorAll('.crypto-btn').forEach(b => b.classList.remove('active'));
-    event.target.classList.add('active');
-    const address = coin === 'ETH' ? ETH_WALLET : XMR_WALLET;
-    document.getElementById('wallet-address-text').textContent = address;
-    document.getElementById('wallet-box').classList.add('visible');
-  }
-
-  function copyWallet() {
-    const address = selectedCrypto === 'ETH' ? ETH_WALLET : XMR_WALLET;
-    navigator.clipboard.writeText(address);
-    document.querySelector('.copy-btn').textContent = '✅ Copied!';
-    setTimeout(() => document.querySelector('.copy-btn').textContent = '📋 Copy Address', 2000);
-  }
-
-  async function submitOrder() {
-    if (!selectedCrypto) {
-      alert('Please select a cryptocurrency first.');
-      return;
-    }
-
-    const note = document.getElementById('customer-note').value;
-    const walletUsed = selectedCrypto === 'ETH' ? ETH_WALLET : XMR_WALLET;
-
-    const { error } = await db.from('orders').insert({
-      telegram_user_id: user ? String(user.id) : 'unknown',
-      telegram_username: user?.username || '',
-      product_id: selectedProduct.id,
-      product_name: selectedProduct.name,
-      price_usd: selectedProduct.price_usd,
-      crypto: selectedCrypto,
-      wallet_address: walletUsed,
-      customer_note: note,
-      status: 'pending'
+// ── Cart ─────────────────────────────────────
+async function addToCart() {
+  if (!user) { showToast('Open in Telegram!'); return; }
+  closeModal();
+  const existing = cartItems.find(i => i.product_id === currentProduct.id);
+  if (existing) {
+    await db.from('cart_items').update({ quantity: existing.quantity + modalQty }).eq('id', existing.id);
+  } else {
+    await db.from('cart_items').insert({
+      telegram_user_id: String(user.id),
+      product_id:   currentProduct.id,
+      product_name: currentProduct.name,
+      price_usd:    currentProduct.price_usd,
+      quantity:     modalQty
     });
-
-    if (error) {
-      alert('Something went wrong. Please try again.');
-      return;
-    }
-
-    document.getElementById('order-form').style.display = 'none';
-    document.getElementById('success-screen').classList.add('visible');
   }
+  await loadCart();
+  showToast('Added to cart! 🛒');
+}
 
-  // Init
-  saveUserProfile();
-  loadProducts();
+async function loadCart() {
+  if (!user) return;
+  const { data } = await db.from('cart_items')
+    .select('*').eq('telegram_user_id', String(user.id));
+  cartItems = data || [];
+  const total = cartItems.reduce((s, i) => s + i.quantity, 0);
+  const badge = document.getElementById('cart-badge');
+  badge.textContent = total;
+  badge.style.display = total > 0 ? 'flex' : 'none';
+}
+
+async function updateQty(id, delta) {
+  const item = cartItems.find(i => i.id === id);
+  if (!item) return;
+  const newQty = item.quantity + delta;
+  if (newQty <= 0) { await removeCartItem(id); return; }
+  await db.from('cart_items').update({ quantity: newQty }).eq('id', id);
+  await loadCart(); renderCart();
+}
+
+async function removeCartItem(id) {
+  await db.from('cart_items').delete().eq('id', id);
+  await loadCart(); renderCart();
+}
+
+function renderCart() {
+  const list = document.getElementById('cart-items-list');
+  const summary = document.getElementById('cart-summary');
+  if (!cartItems.length) {
+    list.innerHTML = '<div class="empty-state"><div class="icon">🛒</div><p>Your cart is empty</p></div>';
+    summary.innerHTML = ''; return;
+  }
+  list.innerHTML = cartItems.map(i => `
+    <div class="cart-item">
+      <div class="cart-item-emoji">🥐</div>
+      <div class="cart-item-info">
+        <div class="cart-item-name">${i.product_name}</div>
+        <div class="cart-item-price">$${(parseFloat(i.price_usd) * i.quantity).toFixed(2)}</div>
+        <div class="qty-control">
+          <button class="qty-btn" onclick="updateQty('${i.id}',-1)">−</button>
+          <span class="qty-num">${i.quantity}</span>
+          <button class="qty-btn" onclick="updateQty('${i.id}',1)">+</button>
+        </div>
+      </div>
+      <span class="remove-btn" onclick="removeCartItem('${i.id}')">🗑️</span>
+    </div>
+  `).join('');
+
+  const total = cartItems.reduce((s, i) => s + parseFloat(i.price_usd) * i.quantity, 0);
+  const balance = parseFloat(userProfile?.balance_usd || 0);
+  const canCheckout = balance >= total;
+
+  summary.innerHTML = `
+    <div class="cart-summary">
+      <div class="summary-row"><span>Subtotal</span><span>$${total.toFixed(2)}</span></div>
+      <div class="summary-row"><span>Wallet Balance</span><span>$${balance.toFixed(2)}</span></div>
+      <div class="summary-row total"><span>Total</span><span>$${total.toFixed(2)}</span></div>
+      <button class="checkout-btn" onclick="checkout()" ${canCheckout ? '' : 'disabled'}>
+        ${canCheckout ? '✅ Place Order' : '⚠️ Insufficient Balance — Deposit First'}
+      </button>
+    </div>`;
+}
+
+async function checkout() {
+  if (!user || !cartItems.length) return;
+  const total = cartItems.reduce((s, i) => s + parseFloat(i.price_usd) * i.quantity, 0);
+  const balance = parseFloat(userProfile?.balance_usd || 0);
+  if (balance < total) { showToast('Insufficient balance!'); return; }
+
+  const productsSummary = cartItems.map(i => `${i.product_name} x${i.quantity}`).join(', ');
+
+  await db.from('orders').insert({
+    telegram_user_id: String(user.id),
+    telegram_username: user.username || '',
+    product_name: productsSummary,
+    price_usd: total,
+    crypto: 'BALANCE',
+    wallet_address: 'wallet',
+    status: 'pending'
+  });
+
+  await db.from('user_profiles')
+    .update({ balance_usd: balance - total })
+    .eq('telegram_user_id', String(user.id));
+
+  await db.from('cart_items').delete().eq('telegram_user_id', String(user.id));
+
+  userProfile.balance_usd = balance - total;
+  await loadCart();
+  showToast('Order placed! 🎉');
+  switchPage('orders');
+}
+
+// ── Wallet ───────────────────────────────────
+function selectDepositCrypto(coin, el) {
+  selectedDepositCrypto = coin;
+  document.querySelectorAll('.crypto-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('deposit-crypto-label').textContent = coin;
+  document.getElementById('deposit-wallet-addr').textContent =
+    coin === 'ETH' ? ETH_WALLET : XMR_WALLET;
+}
+
+function copyDepositAddr() {
+  const addr = selectedDepositCrypto === 'ETH' ? ETH_WALLET : XMR_WALLET;
+  navigator.clipboard.writeText(addr);
+  showToast('Address copied! 📋');
+}
+
+async function submitDeposit() {
+  const amount = parseFloat(document.getElementById('deposit-amount').value);
+  if (!amount || amount <= 0) { showToast('Enter a valid amount'); return; }
+  if (!user) { showToast('Open in Telegram!'); return; }
+
+  await db.from('deposits').insert({
+    telegram_user_id: String(user.id),
+    crypto: selectedDepositCrypto,
+    wallet_address: selectedDepositCrypto === 'ETH' ? ETH_WALLET : XMR_WALLET,
+    amount_usd: amount,
+    status: 'pending'
+  });
+
+  document.getElementById('deposit-amount').value = '';
+  showToast('Deposit submitted! ⏳ We\'ll confirm soon.');
+  renderWallet();
+}
+
+async function renderWallet() {
+  const addr = selectedDepositCrypto === 'ETH' ? ETH_WALLET : XMR_WALLET;
+  document.getElementById('deposit-wallet-addr').textContent = addr;
+  document.getElementById('wallet-balance').textContent =
+    '$' + parseFloat(userProfile?.balance_usd || 0).toFixed(2);
+
+  if (!user) return;
+  const { data } = await db.from('deposits')
+    .select('*').eq('telegram_user_id', String(user.id))
+    .order('created_at', { ascending: false }).limit(10);
+
+  const list = document.getElementById('deposit-history-list');
+  if (!data?.length) {
+    list.innerHTML = '<div style="color:var(--sub);font-size:14px">No deposits yet</div>'; return;
+  }
+  list.innerHTML = data.map(d => `
+    <div class="deposit-item">
+      <div class="deposit-info">
+        <div class="dep-crypto">${d.crypto} — $${parseFloat(d.amount_usd).toFixed(2)}</div>
+        <div class="dep-date">${new Date(d.created_at).toLocaleDateString()}</div>
+      </div>
+      <span class="deposit-status status-${d.status}">${d.status}</span>
+    </div>
+  `).join('');
+}
+
+// ── Orders ───────────────────────────────────
+async function renderOrders() {
+  if (!user) return;
+  const { data } = await db.from('orders')
+    .select('*').eq('telegram_user_id', String(user.id))
+    .order('created_at', { ascending: false });
+
+  const list = document.getElementById('orders-list');
+  if (!data?.length) {
+    list.innerHTML = '<div class="empty-state"><div class="icon">📦</div><p>No orders yet</p></div>';
+    document.getElementById('stat-orders').textContent = 0; return;
+  }
+  document.getElementById('stat-orders').textContent = data.length;
+  list.innerHTML = data.map(o => `
+    <div class="order-item">
+      <div class="order-header">
+        <span class="order-id">#${o.id.slice(0,8).toUpperCase()}</span>
+        <span class="deposit-status status-${o.status}">${o.status}</span>
+      </div>
+      <div class="order-products">${o.product_name}</div>
+      <div class="order-total">$${parseFloat(o.price_usd).toFixed(2)}</div>
+      <div class="order-date">${new Date(o.created_at).toLocaleString()}</div>
+    </div>
+  `).join('');
+}
+
+// ── Profile ──────────────────────────────────
+function renderProfile() {
+  if (!user) return;
+  document.getElementById('profile-name').textContent =
+    [user.first_name, user.last_name].filter(Boolean).join(' ') || 'Anonymous';
+  document.getElementById('profile-handle').textContent =
+    user.username ? '@' + user.username : 'No username set';
+  document.getElementById('stat-balance').textContent =
+    '$' + parseFloat(userProfile?.balance_usd || 0).toFixed(2);
+}
+
+// ── Init ─────────────────────────────────────
+async function init() {
+  await Promise.all([loadCryptoPrices(), initUser(), loadProducts(), loadCart()]);
+  setInterval(loadCryptoPrices, 60000);
+}
+
+init();
 </script>
 </body>
 </html>
