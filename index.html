@@ -145,6 +145,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
 .order-products{font-size:13px;margin-bottom:5px;}
 .order-total{font-size:14px;font-weight:600;color:var(--accent);}
 .order-date{font-size:10px;color:var(--sub);margin-top:3px;}
+.order-address{font-size:11px;color:var(--sub);margin-top:4px;font-style:italic;}
 
 /* PROFILE */
 .profile-header{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:22px;text-align:center;margin-bottom:14px;}
@@ -180,9 +181,25 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
 .rate-stars{display:flex;gap:4px;}
 .rate-star{font-size:22px;color:rgba(255,255,255,0.15);cursor:pointer;transition:color 0.1s;}
 .rate-star.lit{color:#fbbf24;}
+.rate-locked{font-size:12px;color:var(--sub);font-style:italic;}
 .modal-btns{display:flex;gap:8px;}
 .modal-add-btn{flex:1;padding:13px;border-radius:11px;background:transparent;border:1px solid var(--border);color:white;font-size:14px;font-weight:500;cursor:pointer;}
 .modal-buy-btn{flex:1;padding:13px;border-radius:11px;background:var(--accent);border:none;font-size:14px;font-weight:600;color:#000;cursor:pointer;}
+
+/* CHECKOUT MODAL */
+.checkout-modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:300;align-items:flex-end;justify-content:center;}
+.checkout-modal-overlay.active{display:flex;}
+.checkout-modal{background:#111;border-radius:22px 22px 0 0;padding:20px;width:100%;max-height:70vh;overflow-y:auto;}
+.checkout-modal h3{font-size:16px;font-weight:600;margin-bottom:4px;}
+.checkout-modal p{font-size:12px;color:var(--sub);margin-bottom:16px;}
+.field-label{font-size:11px;color:var(--sub);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:5px;display:block;}
+.text-input{width:100%;padding:11px 13px;border-radius:10px;background:var(--card2);border:1px solid var(--border);color:white;font-size:14px;margin-bottom:12px;outline:none;}
+.text-input:focus{border-color:var(--accent);}
+.text-area{width:100%;padding:11px 13px;border-radius:10px;background:var(--card2);border:1px solid var(--border);color:white;font-size:14px;margin-bottom:16px;outline:none;resize:none;min-height:80px;font-family:inherit;}
+.text-area:focus{border-color:var(--accent);}
+.confirm-order-btn{width:100%;padding:13px;border-radius:11px;background:var(--accent);border:none;font-size:14px;font-weight:600;color:#000;cursor:pointer;}
+.confirm-order-btn:disabled{opacity:0.4;cursor:not-allowed;}
+.cancel-order-btn{width:100%;padding:11px;border-radius:11px;background:transparent;border:1px solid var(--border);color:var(--sub);font-size:13px;cursor:pointer;margin-top:8px;}
 
 .toast{position:fixed;top:18px;left:50%;transform:translateX(-50%);background:var(--accent);color:#000;padding:9px 18px;border-radius:999px;font-size:12px;font-weight:700;z-index:999;opacity:0;transition:opacity 0.3s;pointer-events:none;white-space:nowrap;}
 .toast.show{opacity:1;}
@@ -198,7 +215,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
       <h1>bakery</h1>
       <div class="prices">
         <span class="crypto-price">
-          <!-- ETH icon inline SVG (no background) -->
           <svg class="crypto-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M12 2L5 12.5L12 16L19 12.5L12 2Z" fill="#627EEA" opacity="0.8"/>
             <path d="M12 16L5 12.5L12 22L19 12.5L12 16Z" fill="#627EEA"/>
@@ -210,7 +226,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
           <span id="eth-price" style="color:var(--sub)">—</span>
         </span>
         <span class="crypto-price">
-          <!-- XMR icon inline SVG (no background) -->
           <svg class="crypto-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <circle cx="12" cy="12" r="10" fill="#F26822"/>
             <path d="M6 16.5V9l6-4 6 4v7.5" stroke="white" stroke-width="1.5" stroke-linejoin="round" fill="none"/>
@@ -301,6 +316,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
         <div class="stat-value" id="stat-orders">0</div>
         <div class="stat-label">Orders</div>
       </div>
+      <div class="stat-card" style="grid-column:1/-1">
+        <div class="stat-value" id="stat-spent">$0</div>
+        <div class="stat-label">Total Spent</div>
+      </div>
     </div>
   </div>
 
@@ -331,7 +350,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
 </nav>
 
 <!-- PRODUCT MODAL -->
-<div class="modal-overlay" id="product-modal">
+<div class="modal-overlay" id="product-modal" onclick="handleModalOverlayClick(event)">
   <div class="modal">
     <div class="modal-handle"></div>
     <div class="modal-brand" id="modal-brand"></div>
@@ -351,7 +370,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
         <button class="qty-btn" onclick="changeModalQty(1)">+</button>
       </div>
     </div>
-    <div class="rate-section">
+    <div class="rate-section" id="rate-section">
       <label>Rate this product</label>
       <div class="rate-stars" id="rate-stars">
         <span class="rate-star" onclick="setRating(1)">★</span>
@@ -365,6 +384,21 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
       <button class="modal-add-btn" onclick="addToCart()">Add to Cart</button>
       <button class="modal-buy-btn" onclick="buyNow()">Buy Now</button>
     </div>
+  </div>
+</div>
+
+<!-- CHECKOUT ADDRESS MODAL -->
+<div class="checkout-modal-overlay" id="checkout-modal">
+  <div class="checkout-modal">
+    <div class="modal-handle"></div>
+    <h3>📦 Shipping Info</h3>
+    <p>We need your details to complete this order.</p>
+    <label class="field-label">Full Name</label>
+    <input class="text-input" id="checkout-name" type="text" placeholder="John Smith" autocomplete="name"/>
+    <label class="field-label">Shipping Address</label>
+    <textarea class="text-area" id="checkout-address" placeholder="123 Main St, Apt 4B&#10;City, State, ZIP&#10;Country"></textarea>
+    <button class="confirm-order-btn" id="confirm-order-btn" onclick="confirmCheckout()">✅ Place Order</button>
+    <button class="cancel-order-btn" onclick="closeCheckoutModal()">Cancel</button>
   </div>
 </div>
 
@@ -389,10 +423,17 @@ const user=tg.initDataUnsafe?.user;
 let allProducts=[],cartItems=[],currentProduct=null,modalQty=1;
 let selectedDepositCrypto='ETH',userProfile=null,userRating=0;
 
+// Cache: productId -> { orderId, rated: bool, ratedValue: int }
+let ratingEligibility = {};
+
 function showToast(msg){
   const t=document.getElementById('toast');
   t.textContent=msg;t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'),2000);
+}
+
+function handleModalOverlayClick(e){
+  if(e.target===document.getElementById('product-modal'))closeModal();
 }
 
 function switchPage(page){
@@ -431,9 +472,56 @@ async function initUser(){
   document.getElementById('stat-balance').textContent='$'+parseFloat(data?.balance_usd||0).toFixed(2);
 }
 
+// ── Rating eligibility ────────────────────────────────────────────────────────
+// A user can rate a product if they have at least one confirmed order containing
+// that product AND haven't rated it for their most recent such order.
+// We store ratings in a `product_ratings` table:
+//   telegram_user_id, product_id, order_id, rating, created_at
+async function loadRatingEligibility(){
+  if(!user)return;
+  // Get all confirmed orders for this user
+  const{data:orders}=await db.from('orders')
+    .select('id,product_name,status,created_at')
+    .eq('telegram_user_id',String(user.id))
+    .eq('status','confirmed')
+    .order('created_at',{ascending:false});
+  if(!orders?.length)return;
+
+  // Get all ratings this user has already submitted
+  const{data:ratings}=await db.from('product_ratings')
+    .select('product_id,order_id')
+    .eq('telegram_user_id',String(user.id));
+  const ratedSet=new Set((ratings||[]).map(r=>r.product_id+'|'+r.order_id));
+
+  // Build eligibility map: for each product in confirmed orders, find the latest
+  // order that hasn't been rated yet
+  ratingEligibility={};
+  for(const order of orders){
+    // product_name in orders is a comma-joined string like "Product A x2, Product B x1"
+    // We match against allProducts names
+    for(const product of allProducts){
+      if(order.product_name.includes(product.name)){
+        const key=product.id+'|'+order.id;
+        if(!ratedSet.has(key)&&!ratingEligibility[product.id]){
+          // Eligible: most recent unrated confirmed order for this product
+          ratingEligibility[product.id]={orderId:order.id,rated:false};
+        }
+      }
+    }
+  }
+  // Also mark already-rated ones so we can show the cached value
+  for(const r of (ratings||[])){
+    if(!ratingEligibility[r.product_id]){
+      ratingEligibility[r.product_id]={orderId:r.order_id,rated:true};
+    }
+  }
+}
+
 async function loadProducts(){
   const{data}=await db.from('products').select('*').order('created_at');
-  allProducts=data||[];renderProducts(allProducts);
+  allProducts=data||[];
+  await loadRatingEligibility();
+  renderProducts(allProducts);
 }
 
 function renderProducts(products){
@@ -474,7 +562,31 @@ function openModal(product){
   const vars=(product.variants||'').split(',').map(v=>v.trim()).filter(Boolean);
   varDiv.innerHTML=vars.length?vars.map((v,i)=>
     `<span class="variant-tag ${i===0?'active':''}" onclick="selectVariant(this)">${v}</span>`).join(''):'';
-  document.querySelectorAll('.rate-star').forEach(s=>s.classList.remove('lit'));
+
+  // Rating section — show based on eligibility
+  const rateSection=document.getElementById('rate-section');
+  const eligibility=ratingEligibility[product.id];
+  if(!user){
+    rateSection.innerHTML='<p class="rate-locked">Open in Telegram to rate.</p>';
+  } else if(!eligibility){
+    // No confirmed order for this product
+    rateSection.innerHTML='<p class="rate-locked">Purchase & confirm an order to leave a review ⭐</p>';
+  } else if(eligibility.rated){
+    // Already rated this order
+    rateSection.innerHTML='<p class="rate-locked">You\'ve already reviewed this order ✅</p>';
+  } else {
+    // Eligible — show interactive stars
+    rateSection.innerHTML=`
+      <label>Rate this product</label>
+      <div class="rate-stars" id="rate-stars">
+        <span class="rate-star" onclick="setRating(1)">★</span>
+        <span class="rate-star" onclick="setRating(2)">★</span>
+        <span class="rate-star" onclick="setRating(3)">★</span>
+        <span class="rate-star" onclick="setRating(4)">★</span>
+        <span class="rate-star" onclick="setRating(5)">★</span>
+      </div>`;
+  }
+
   document.getElementById('product-modal').classList.add('active');
 }
 function closeModal(){document.getElementById('product-modal').classList.remove('active');}
@@ -486,14 +598,32 @@ function setRating(n){
   document.querySelectorAll('.rate-star').forEach((s,i)=>s.classList.toggle('lit',i<n));
   submitRating(n);
 }
+
 async function submitRating(n){
-  if(!currentProduct)return;
+  if(!currentProduct||!user)return;
+  const eligibility=ratingEligibility[currentProduct.id];
+  if(!eligibility||eligibility.rated)return;
+
+  // Save rating to product_ratings table (per order, per product)
+  await db.from('product_ratings').upsert({
+    telegram_user_id:String(user.id),
+    product_id:currentProduct.id,
+    order_id:eligibility.orderId,
+    rating:n
+  },{onConflict:'telegram_user_id,product_id,order_id'});
+
+  // Update aggregate rating on product
   const oldR=parseFloat(currentProduct.rating||0),oldC=parseInt(currentProduct.review_count||0);
   const newC=oldC+1,newR=((oldR*oldC)+n)/newC;
   await db.from('products').update({rating:newR,review_count:newC}).eq('id',currentProduct.id);
+
+  // Cache locally so UI updates immediately
   currentProduct.rating=newR;currentProduct.review_count=newC;
+  ratingEligibility[currentProduct.id]={...eligibility,rated:true};
+
   document.getElementById('modal-stars').textContent=renderStars(newR);
   document.getElementById('modal-reviews').textContent=newR.toFixed(1)+' ('+newC+' reviews)';
+  document.getElementById('rate-section').innerHTML='<p class="rate-locked">Thanks for your review! ⭐</p>';
   showToast('Thanks for rating! ⭐');
   await loadProducts();
 }
@@ -566,27 +696,69 @@ function renderCart(){
       <div class="summary-row total"><span>Total</span><span>$${total.toFixed(2)}</span></div>
       <div class="checkout-btns">
         <button class="add-cart-btn2" onclick="switchPage('wallet')">💰 Top Up</button>
-        <button class="buy-now-btn" onclick="checkout()" ${canCheckout?'':'disabled'}>
+        <button class="buy-now-btn" onclick="openCheckoutModal()" ${canCheckout?'':'disabled'}>
           ${canCheckout?'Place Order':'Low Balance'}
         </button>
       </div>
     </div>`;
 }
 
-async function checkout(){
+// ── Checkout address modal ────────────────────────────────────────────────────
+function openCheckoutModal(){
   if(!user||!cartItems.length)return;
   const total=cartItems.reduce((s,i)=>s+parseFloat(i.price_usd)*i.quantity,0);
   const balance=parseFloat(userProfile?.balance_usd||0);
   if(balance<total){showToast('Insufficient balance!');return;}
+  // Pre-fill name from Telegram profile if available
+  const fullName=[user.first_name,user.last_name].filter(Boolean).join(' ');
+  document.getElementById('checkout-name').value=fullName||'';
+  document.getElementById('checkout-address').value='';
+  document.getElementById('checkout-modal').classList.add('active');
+}
+
+function closeCheckoutModal(){
+  document.getElementById('checkout-modal').classList.remove('active');
+}
+
+async function confirmCheckout(){
+  const name=document.getElementById('checkout-name').value.trim();
+  const address=document.getElementById('checkout-address').value.trim();
+  if(!name){showToast('Please enter your name');return;}
+  if(!address||address.length<10){showToast('Please enter a full shipping address');return;}
+
+  const btn=document.getElementById('confirm-order-btn');
+  btn.disabled=true;btn.textContent='Placing order...';
+
+  if(!user||!cartItems.length){btn.disabled=false;btn.textContent='✅ Place Order';return;}
+  const total=cartItems.reduce((s,i)=>s+parseFloat(i.price_usd)*i.quantity,0);
+  const balance=parseFloat(userProfile?.balance_usd||0);
+  if(balance<total){showToast('Insufficient balance!');btn.disabled=false;btn.textContent='✅ Place Order';return;}
+
   const productsSummary=cartItems.map(i=>`${i.product_name} x${i.quantity}`).join(', ');
+
   await db.from('orders').insert({
-    telegram_user_id:String(user.id),telegram_username:user.username||'',
-    product_name:productsSummary,price_usd:total,crypto:'BALANCE',wallet_address:'wallet',status:'pending'
+    telegram_user_id:String(user.id),
+    telegram_username:user.username||'',
+    product_name:productsSummary,
+    price_usd:total,
+    crypto:'BALANCE',
+    wallet_address:'wallet',
+    status:'pending',
+    shipping_name:name,
+    shipping_address:address
   });
+
+  // Deduct balance immediately
   await db.from('user_profiles').update({balance_usd:balance-total}).eq('telegram_user_id',String(user.id));
-  await db.from('cart_items').delete().eq('telegram_user_id',String(user.id));
   userProfile.balance_usd=balance-total;
-  await loadCart();showToast('Order placed! 🎉');switchPage('orders');
+
+  await db.from('cart_items').delete().eq('telegram_user_id',String(user.id));
+  await loadCart();
+
+  btn.disabled=false;btn.textContent='✅ Place Order';
+  closeCheckoutModal();
+  showToast('Order placed! 🎉');
+  switchPage('orders');
 }
 
 function selectDepositCrypto(coin,el){
@@ -651,6 +823,7 @@ async function renderOrders(){
       </div>
       <div class="order-products">${o.product_name}</div>
       <div class="order-total">$${parseFloat(o.price_usd).toFixed(2)}</div>
+      ${o.shipping_name?`<div class="order-address">📦 ${o.shipping_name} — ${o.shipping_address}</div>`:''}
       <div class="order-date">${new Date(o.created_at).toLocaleString()}</div>
     </div>`).join('');
 }
@@ -663,6 +836,8 @@ function renderProfile(){
     user.username?'@'+user.username:'No username set';
   document.getElementById('stat-balance').textContent=
     '$'+parseFloat(userProfile?.balance_usd||0).toFixed(2);
+  document.getElementById('stat-spent').textContent=
+    '$'+parseFloat(userProfile?.total_spent||0).toFixed(2);
 }
 
 async function init(){
