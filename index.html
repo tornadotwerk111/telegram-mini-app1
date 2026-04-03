@@ -940,14 +940,12 @@ function closeReviewPicker(){
 
 // Called after everything is loaded — checks if app was opened from a review deep link
 async function checkReviewDeepLink(){
-  // Read from URL hash e.g. #review_abc123
-  const hash = window.location.hash || '';
-  if(!hash.startsWith('#review_'))return;
-  const orderId = hash.replace('#review_','');
+  // Telegram passes startapp param via tg.initDataUnsafe.start_param
+  // when opened via t.me/botname?startapp=review_ORDERID
+  const startParam = tg.initDataUnsafe?.start_param || '';
+  if(!startParam.startsWith('review_'))return;
+  const orderId = startParam.replace('review_','');
   if(!orderId||!user)return;
-
-  // Clear the hash so it doesn't re-trigger on internal navigation
-  history.replaceState(null,'',window.location.pathname);
 
   // Fetch the order to get product names
   const{data:order}=await db.from('orders').select('*').eq('id',orderId).single();
