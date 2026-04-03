@@ -940,11 +940,14 @@ function closeReviewPicker(){
 
 // Called after everything is loaded — checks if app was opened from a review deep link
 async function checkReviewDeepLink(){
-  // Telegram passes startapp param via initDataUnsafe.start_param
-  const startParam = tg.initDataUnsafe?.start_param || '';
-  if(!startParam.startsWith('review_'))return;
-  const orderId = startParam.replace('review_','');
+  // Read from URL hash e.g. #review_abc123
+  const hash = window.location.hash || '';
+  if(!hash.startsWith('#review_'))return;
+  const orderId = hash.replace('#review_','');
   if(!orderId||!user)return;
+
+  // Clear the hash so it doesn't re-trigger on internal navigation
+  history.replaceState(null,'',window.location.pathname);
 
   // Fetch the order to get product names
   const{data:order}=await db.from('orders').select('*').eq('id',orderId).single();
@@ -954,9 +957,7 @@ async function checkReviewDeepLink(){
   const unrated=allProducts.filter(p=>{
     if(!order.product_name.includes(p.name))return false;
     const elig=ratingEligibility[p.id];
-    // eligible means we have an unrated entry for this order, or the order matches
-    if(!elig)return false;
-    if(elig.rated)return false;
+    if(!elig||elig.rated)return false;
     return true;
   });
 
@@ -966,7 +967,6 @@ async function checkReviewDeepLink(){
   }
 
   if(unrated.length===1){
-    // Only one product — open it directly
     openModal(unrated[0]);
     return;
   }
@@ -987,9 +987,32 @@ function pickReviewProduct(productId){
   if(product)openModal(product);
 }
 
+// Live order status updates — no need to close/reopen the app
+function subscribeToOrderUpdates(){
+  if(!user)return;
+  db.channel('order-status-updates')
+    .on('postgres_changes',{
+      event:'UPDATE',schema:'public',table:'orders',
+      filter:`telegram_user_id=eq.${String(user.id)}`
+    },(payload)=>{
+      const updated=payload.new;
+      // Update cached order count display if needed
+      // Re-render orders list if currently visible
+      const ordersPage=document.getElementById('page-orders');
+      if(ordersPage.classList.contains('active')){
+        renderOrders();
+      }
+      // Show a toast so the user knows even if they're on another tab
+      const sd=statusDisplay(updated.status);
+      showToast(`Order updated: ${sd.label} ${updated.status==='shipped'?'📬':updated.status==='delivered'?'✅':'🛒'}`);
+    })
+    .subscribe();
+}
+
 async function init(){
   await Promise.all([loadCryptoPrices(),initUser(),loadProducts(),loadCart()]);
   await loadOrderCount();
+  subscribeToOrderUpdates(); // live order status push
   await checkReviewDeepLink(); // auto-open review modal if launched from delivery notification
   setInterval(loadCryptoPrices,60000);
 }
