@@ -521,11 +521,12 @@ async function initUser(){
 //   telegram_user_id, product_id, order_id, rating, created_at
 async function loadRatingEligibility(){
   if(!user)return;
-  // Get all confirmed orders for this user
+
+  // Get ALL non-pending orders (ordered, shipped, delivered) — not just 'confirmed'
   const{data:orders}=await db.from('orders')
     .select('id,product_name,status,created_at')
     .eq('telegram_user_id',String(user.id))
-    .eq('status','confirmed')
+    .in('status',['ordered','shipped','delivered','confirmed'])
     .order('created_at',{ascending:false});
   if(!orders?.length)return;
 
@@ -533,28 +534,28 @@ async function loadRatingEligibility(){
   const{data:ratings}=await db.from('product_ratings')
     .select('product_id,order_id')
     .eq('telegram_user_id',String(user.id));
+  // Set of "productId|orderId" combos already rated
   const ratedSet=new Set((ratings||[]).map(r=>r.product_id+'|'+r.order_id));
 
-  // Build eligibility map: for each product in confirmed orders, find the latest
-  // order that hasn't been rated yet
+  // Build eligibility map per product:
+  // Find the most recent order for each product that hasn't been rated yet.
+  // Orders are already sorted newest first so first unrated match wins.
   ratingEligibility={};
   for(const order of orders){
-    // product_name in orders is a comma-joined string like "Product A x2, Product B x1"
-    // We match against allProducts names
     for(const product of allProducts){
-      if(order.product_name.includes(product.name)){
-        const key=product.id+'|'+order.id;
-        if(!ratedSet.has(key)&&!ratingEligibility[product.id]){
-          // Eligible: most recent unrated confirmed order for this product
-          ratingEligibility[product.id]={orderId:order.id,rated:false};
+      if(ratingEligibility[product.id])continue; // already found best match for this product
+      if(!order.product_name.includes(product.name))continue;
+      const key=product.id+'|'+order.id;
+      if(ratedSet.has(key)){
+        // This order was already rated — keep looking for a newer unrated one
+        // but mark as rated so the UI shows "already reviewed" if nothing better found
+        if(!ratingEligibility[product.id]){
+          ratingEligibility[product.id]={orderId:order.id,rated:true};
         }
+      } else {
+        // Unrated order found — this product is eligible
+        ratingEligibility[product.id]={orderId:order.id,rated:false};
       }
-    }
-  }
-  // Also mark already-rated ones so we can show the cached value
-  for(const r of (ratings||[])){
-    if(!ratingEligibility[r.product_id]){
-      ratingEligibility[r.product_id]={orderId:r.order_id,rated:true};
     }
   }
 }
@@ -961,14 +962,14 @@ function closeReviewPicker(){
 
 // Called after everything is loaded — checks if app was opened from a review deep link
 async function checkReviewDeepLink(){
-  // Telegram passes startapp param via tg.initDataUnsafe.start_param
-  // when opened via t.me/botname?startapp=review_ORDERID
   const startParam = tg.initDataUnsafe?.start_param || '';
   if(!startParam.startsWith('review_'))return;
   const orderId = startParam.replace('review_','');
   if(!orderId||!user)return;
 
-  // Fetch the order to get product names
+  // Reload eligibility fresh so we don't use stale cached data
+  await loadRatingEligibility();
+
   const{data:order}=await db.from('orders').select('*').eq('id',orderId).single();
   if(!order)return;
 
