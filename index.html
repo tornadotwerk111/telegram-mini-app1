@@ -123,14 +123,17 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
 .balance-amount{font-size:36px;font-weight:600;color:var(--accent);margin:6px 0;}
 .deposit-section h3{font-size:14px;font-weight:600;margin-bottom:10px;}
 .crypto-tabs{display:flex;gap:8px;margin-bottom:14px;}
-.crypto-tab{flex:1;padding:9px;border-radius:10px;border:1.5px solid var(--border);background:transparent;color:var(--sub);font-size:13px;cursor:pointer;}
+.crypto-tab{flex:1;padding:8px;border-radius:10px;border:1.5px solid var(--border);background:transparent;color:var(--sub);font-size:12px;cursor:pointer;text-transform:lowercase;letter-spacing:0.3px;}
 .crypto-tab.active{border-color:var(--accent);color:var(--accent);background:rgba(168,224,99,0.08);}
 .wallet-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px;}
 .wallet-label{font-size:10px;color:var(--sub);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;}
 .wallet-addr{font-family:monospace;font-size:11px;word-break:break-all;background:var(--card2);padding:9px;border-radius:7px;line-height:1.5;}
-.copy-btn{width:100%;padding:9px;margin-top:9px;border-radius:8px;background:var(--card2);border:1px solid var(--border);color:white;font-size:12px;cursor:pointer;}
-.amount-input{width:100%;padding:11px;border-radius:10px;background:var(--card2);border:1px solid var(--border);color:white;font-size:15px;margin-bottom:10px;}
-.deposit-btn{width:100%;padding:12px;border-radius:11px;background:linear-gradient(135deg,var(--accent),#4fc3f7);border:none;font-size:14px;font-weight:600;color:#000;cursor:pointer;}
+.copy-btn{width:100%;padding:8px;margin-top:9px;border-radius:8px;background:var(--card2);border:1px solid var(--border);color:var(--sub);font-size:11px;cursor:pointer;text-transform:lowercase;letter-spacing:0.3px;}
+.deposit-inputs{display:flex;gap:8px;margin-bottom:10px;}
+.amount-input{flex:1;padding:9px 11px;border-radius:10px;background:var(--card2);border:1px solid var(--border);color:white;font-size:13px;min-width:0;}
+.txid-input{flex:2;padding:9px 11px;border-radius:10px;background:var(--card2);border:1px solid var(--border);color:white;font-size:13px;min-width:0;}
+.deposit-btn{width:100%;padding:11px;border-radius:11px;background:var(--card2);border:1px solid var(--border);font-size:13px;font-weight:500;color:var(--sub);cursor:pointer;text-transform:lowercase;letter-spacing:0.3px;transition:border-color 0.2s,color 0.2s;}
+.deposit-btn:hover{border-color:var(--accent);color:var(--accent);}
 .deposit-item{background:var(--card);border:1px solid var(--border);border-radius:11px;padding:11px 13px;margin-bottom:7px;display:flex;justify-content:space-between;align-items:center;}
 .dep-crypto{font-size:13px;font-weight:500;}
 .dep-date{font-size:10px;color:var(--sub);margin-top:2px;}
@@ -295,18 +298,21 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
       <div style="font-size:11px;color:var(--sub)">USD equivalent</div>
     </div>
     <div class="deposit-section">
-      <h3>Deposit Crypto</h3>
+      <h3>deposit crypto</h3>
       <div class="crypto-tabs">
-        <button class="crypto-tab active" onclick="selectDepositCrypto('ETH',this)">⟠ Ethereum</button>
-        <button class="crypto-tab" onclick="selectDepositCrypto('XMR',this)">ɱ Monero</button>
+        <button class="crypto-tab active" onclick="selectDepositCrypto('ETH',this)">eth</button>
+        <button class="crypto-tab" onclick="selectDepositCrypto('XMR',this)">xmr</button>
       </div>
       <div class="wallet-card">
-        <div class="wallet-label">Send <span id="deposit-crypto-label">ETH</span> to this address</div>
+        <div class="wallet-label">send <span id="deposit-crypto-label">eth</span> to this address</div>
         <div class="wallet-addr" id="deposit-wallet-addr"></div>
-        <button class="copy-btn" onclick="copyDepositAddr()">📋 Copy Address</button>
+        <button class="copy-btn" onclick="copyDepositAddr()">copy address</button>
       </div>
-      <input class="amount-input" type="number" id="deposit-amount" placeholder="USD amount you're sending" min="1"/>
-      <button class="deposit-btn" onclick="submitDeposit()">📥 I've Sent the Deposit</button>
+      <div class="deposit-inputs">
+        <input class="amount-input" type="number" id="deposit-amount" placeholder="usd amount" min="1"/>
+        <input class="txid-input" type="text" id="deposit-txid" placeholder="transaction id"/>
+      </div>
+      <button class="deposit-btn" onclick="submitDeposit()">i've sent the deposit</button>
     </div>
     <div style="margin-top:20px">
       <div class="page-title" style="font-size:15px">Deposit History</div>
@@ -796,24 +802,27 @@ function selectDepositCrypto(coin,el){
   selectedDepositCrypto=coin;
   document.querySelectorAll('.crypto-tab').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
-  document.getElementById('deposit-crypto-label').textContent=coin;
+  document.getElementById('deposit-crypto-label').textContent=coin.toLowerCase();
   document.getElementById('deposit-wallet-addr').textContent=coin==='ETH'?ETH_WALLET:XMR_WALLET;
 }
 function copyDepositAddr(){
   navigator.clipboard.writeText(selectedDepositCrypto==='ETH'?ETH_WALLET:XMR_WALLET);
-  showToast('Address copied! 📋');
+  showToast('address copied');
 }
 async function submitDeposit(){
   const amount=parseFloat(document.getElementById('deposit-amount').value);
-  if(!amount||amount<=0){showToast('Enter a valid amount');return;}
-  if(!user){showToast('Open in Telegram!');return;}
+  const txid=document.getElementById('deposit-txid').value.trim();
+  if(!amount||amount<=0){showToast('enter a valid amount');return;}
+  if(!txid){showToast('paste your transaction id');return;}
+  if(!user){showToast('open in telegram');return;}
   await db.from('deposits').insert({
     telegram_user_id:String(user.id),crypto:selectedDepositCrypto,
     wallet_address:selectedDepositCrypto==='ETH'?ETH_WALLET:XMR_WALLET,
-    amount_usd:amount,status:'pending'
+    amount_usd:amount,txid:txid,status:'pending'
   });
   document.getElementById('deposit-amount').value='';
-  showToast('Deposit submitted! ⏳');renderWallet();
+  document.getElementById('deposit-txid').value='';
+  showToast('deposit submitted');renderWallet();
 }
 
 async function renderWallet(){
